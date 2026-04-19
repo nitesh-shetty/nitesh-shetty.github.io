@@ -1,0 +1,76 @@
+---
+layout: post
+title: "The Invisible Bouncer: A Deep Dive into SELinux Kernel Internals"
+date: 2026-05-21
+---
+
+<div class="entry-content">
+    <p>
+        If you’ve ever managed a Red Hat, Fedora, or AlmaLinux system, you’ve likely encountered the "Permissive vs. Enforcing" debate. 
+        Most people treat <strong>SELinux (Security-Enhanced Linux)</strong> as a nuisance to be disabled, but under the hood, 
+        it is one of the most sophisticated security architectures in modern computing.
+    </p>
+
+    <p>In this post, we’re going under the hood to see how the Linux kernel actually implements <strong>Mandatory Access Control (MAC)</strong>.</p>
+
+    <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #eee;">
+
+    <h2 style="color: var(--accent); font-family: var(--mono);">1. Beyond Permissions: What is SELinux?</h2>
+    <p>
+        Standard Linux uses <strong>DAC (Discretionary Access Control)</strong>. If you own a file, you decide who sees it. 
+        If a process runs as root, it can see everything.
+    </p>
+    <p>
+        SELinux introduces <strong>MAC</strong>. It doesn't care if you are root. It asks: 
+        <em>"Does the security policy explicitly allow this specific process 'type' to touch this specific file 'type'?"</em>
+    </p>
+
+    <h2 style="color: var(--accent); font-family: var(--mono);">2. The Architecture: Who Does the Work?</h2>
+    <p>SELinux isn't a separate program; it is baked into the <strong>LSM (Linux Security Module)</strong> framework.</p>
+
+    
+
+    <h3 style="font-size: 1.1rem; margin-top: 1.5rem;">The LSM Hooks</h3>
+    <p>Think of the kernel as a series of pipes. <strong>LSM hooks</strong> are sensors placed at every junction where a sensitive action occurs.</p>
+    
+    <ul style="border-left: 2px solid #28a745; padding-left: 20px; list-style: none;">
+        <li>1. Process calls <code>open()</code>.</li>
+        <li>2. Kernel checks standard <strong>DAC</strong>.</li>
+        <li>3. If allowed, kernel hits an <strong>LSM Hook</strong>.</li>
+        <li>4. Request is handed to the <strong>Security Server</strong>.</li>
+    </ul>
+
+    <h2 style="color: var(--accent); font-family: var(--mono);">3. The Performance Secret: The AVC</h2>
+    <p>Searching a rulebook for every system call would melt your CPU. The kernel uses the <strong>Access Vector Cache (AVC)</strong> to stay fast.</p>
+    
+    <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; font-family: var(--mono); font-size: 0.9rem;">
+        <strong>// AVC Logic:</strong><br>
+        1. Check AVC (Kernel Memory) -> <strong>HIT?</strong> Return Decision.<br>
+        2. <strong>MISS?</strong> Consult Security Server -> Calculate -> Update AVC.
+    </div>
+
+    
+
+    <h2 style="color: var(--accent); font-family: var(--mono);">4. Practical Toolkit</h2>
+    <p>Here is how you talk to the bouncer in real life using the terminal.</p>
+
+    <div style="background: #1e1e1e; color: #fff; padding: 15px; border-radius: 5px; font-family: var(--mono); margin: 1rem 0;">
+        <span style="color: #888;"># Check status</span><br>
+        <span style="color: #28a745;">$</span> sestatus<br><br>
+        <span style="color: #888;"># Fix labels after moving files</span><br>
+        <span style="color: #28a745;">$</span> restorecon -v index.html
+    </div>
+
+    <h2 style="color: var(--accent); font-family: var(--mono);">5. Summary</h2>
+    <p>
+        By confining processes to their own <strong>Type</strong>, SELinux ensures that even if an attacker exploits a bug 
+        in your Web Server, they are trapped in a sandbox.
+    </p>
+</div>
+
+<style>
+    /* Add this specifically for the post layout if not already in your CSS */
+    .entry-content p { margin-bottom: 1.2rem; }
+    code { background: #f0f0f0; padding: 2px 4px; border-radius: 4px; font-family: var(--mono); }
+    h2 { margin-top: 2.5rem; }
+</style>

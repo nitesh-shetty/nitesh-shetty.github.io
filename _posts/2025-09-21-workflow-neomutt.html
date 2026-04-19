@@ -1,0 +1,112 @@
+---
+layout: post
+title: "Workflow, Neomutt, Lei, Notmuch, Getmail, Gmail"
+date: 2025-09-21
+---
+
+<div class="entry-content">
+    <p>This is a mail setup for terminal UI users. This uses combination of tools,<br>
+    neomutt for viewing mails,<br>
+    notmuch for filtering mails,<br>
+    getmail for fetching mails from gmail,<br>
+    lei for fetching mails from lore.kernel.org.<br>
+    For convinience, lets keep all the config files in ~/.lkml folder</p>
+
+    <pre><code>mkdir -p ~/.lkml/mail</code></pre>
+
+    <h2 style="color: var(--accent); font-family: var(--mono);">lei:</h2>
+    <p>Installation in Debian/Ubuntu:</p>
+    <pre><code>sudo apt install -y lei</code></pre>
+
+    <p>lei, helps with fetching mail from lore.kernel.org without subscribing to any mailing list.<br>
+    lei, also has query features which helps in filtering the mails.<br>
+    For example to fetch mails from linux-block,linux-fsdevel mailing list from last one day,<br>
+    below command should be useful.</p>
+
+    <pre><code>$ lei q -I https://lore.kernel.org/all -o ~/.lkml/mail --threads --dedupe=mid '(tc:linux-block OR tc:linux-fsdevel) AND rt:1.days.ago..'</code></pre>
+
+    <p>Here t and c indicate to and cc mail recipient respectively.<br>
+    Above query also edited later using lei edit-search.</p>
+
+    <p>Once the query is finalized, next time to fetch the mails, simply use</p>
+    <pre><code>$ lei up ~/.lkml/mail</code></pre>
+
+    <h2 style="color: var(--accent); font-family: var(--mono);">notmuch:</h2>
+    <p>Installation in Debian/Ubuntu:</p>
+    <pre><code>sudo apt install -y notmuch</code></pre>
+
+    <p>Above lei setup usually fetches and notmuch helps in filtering the mails<br>
+    Typically a notmuch has a config file in ~/.notmuch-config<br>
+    This file contains the path to fetch and store the filtered mails</p>
+
+    <p>With notmuch we can filter mails and attach tags to mails. And this tag will be used by neomutt to create different virtual mailboxes.</p>
+
+    <p>To filter mails to/cc to linux-block and attach tag linux-block, we use <code>$ notmuch tag +linux-block – to:linux-block@vger.kernel.org</code></p>
+
+    <p>For more tagging batch queries, an input file can be passed.<br>
+    Lets say we create a file by name notmuch-tag-rules,</p>
+    
+    <pre><code>$ cat ~/.lkml/notmuch-tag-rules
++linux-block – to:linux-block@vger.kernel.org
++linux-fsdevel – to:linux-fsdevel@vger.kernel.org</code></pre>
+
+    <p>This file looks similar to command line query, without ‘notmuch tag’ To run this batch tagging,</p>
+    <pre><code>$ notmuch tag --batch --input=~/.lkml/notmuch-tag-rules</code></pre>
+
+    <h2 style="color: var(--accent); font-family: var(--mono);">neomutt:</h2>
+    <p>Installation in Debian/Ubuntu:</p>
+    <pre><code>sudo apt install -y lei</code></pre>
+
+    <p>neomuttrc is config file, which can be passed to neomutt as argument.</p>
+
+    <h3 style="font-size: 1.1rem; color: var(--accent); font-family: var(--mono);">virtual mailbox:</h3>
+    <p>virtual mailboxes help to arrange the mails. lets say we want to put mails from linux-block under linux-block mailing list.</p>
+    <pre><code>virtual-mailboxes “linux-block” “notmuch://?query=tag:linux-block”
+virtual-mailboxes “linux-fsdevel” “notmuch://?query=tag:linux-fsdevel”</code></pre>
+
+    <h3 style="font-size: 1.1rem; color: var(--accent); font-family: var(--mono);">sync/fetch mails</h3>
+    <p>we make use of bash script to check and sync the mails.<br>
+    This script is combination fetching mails from lei and filtering mail using notmuch.<br>
+    let’s say we name the script fetch.sh</p>
+    
+    <pre><code>$cat ~/.lkml/sync.sh
+lei up ~/.lkml/mail
+notmuch new
+notmuch tag –batch –input=~/.lkml/notmuch-tag-rules
+notmuch tag –remove-all +deleted tag:deleted</code></pre>
+
+    <p>we assign F to fetch mail using, and save this in neomuttrc</p>
+    <pre><code>macro index F “path_fetchmail_script 2>&1" "sync email and notmuch"</code></pre>
+
+    <p>Next I plan to add information about the neomuttrc and linking all together.<br>
+    I plan to update improvements here. Stay tuned !!"</p>
+</div>
+
+<style>
+    .entry-content p { margin-bottom: 1.2rem; line-height: 1.6; }
+    
+    pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 1rem;
+        border-radius: 5px;
+        overflow-x: auto;
+        border-left: 3px solid var(--accent);
+        font-family: var(--mono);
+        margin-bottom: 1.5rem;
+    }
+    
+    code {
+        font-family: var(--mono);
+        background: #f4f4f4;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.95rem;
+    }
+    
+    pre code {
+        background: none;
+        padding: 0;
+        color: inherit;
+    }
+</style>

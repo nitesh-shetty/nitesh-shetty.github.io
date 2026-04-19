@@ -1,282 +1,405 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.5">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2026-04-19T18:27:11+05:30</updated><id>http://localhost:4000/feed.xml</id><title type="html">Nitesh Shetty’s Blog</title><subtitle>My plan is to document the things I learn mainly on Linux eco-system.   In the process hope to improve my writing skills and your knowledge.  </subtitle><entry><title type="html">Workflow, Neomutt, Lei, Notmuch, Getmail, Gmail</title><link href="http://localhost:4000/linux/workflow/neomutt/notmuch/getmail/lei/gmail/2025/09/21/workflow-neomutt.html" rel="alternate" type="text/html" title="Workflow, Neomutt, Lei, Notmuch, Getmail, Gmail" /><published>2025-09-21T20:00:00+05:30</published><updated>2025-09-21T20:00:00+05:30</updated><id>http://localhost:4000/linux/workflow/neomutt/notmuch/getmail/lei/gmail/2025/09/21/workflow-neomutt</id><content type="html" xml:base="http://localhost:4000/linux/workflow/neomutt/notmuch/getmail/lei/gmail/2025/09/21/workflow-neomutt.html"><![CDATA[<p>This is a mail setup for terminal UI users. This uses combination of tools,<br />
-<code class="language-plaintext highlighter-rouge">neomutt</code> for viewing mails,<br />
-<code class="language-plaintext highlighter-rouge">notmuch</code> for filtering mails,<br />
-<code class="language-plaintext highlighter-rouge">getmail</code> for fetching mails from gmail,<br />
-<code class="language-plaintext highlighter-rouge">lei</code> for fetching mails from lore.kernel.org.<br />
-For convinience, lets keep all the config files in ~/.lkml folder<br />
-<code class="language-plaintext highlighter-rouge">mkdir -p ~/.lkml/mail</code></p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.5">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2026-04-19T20:33:54+05:30</updated><id>http://localhost:4000/feed.xml</id><title type="html">Nitesh Shetty’s Blog</title><subtitle>My plan is to document the things I learn mainly on Linux eco-system.   In the process hope to improve my writing skills and your knowledge.  </subtitle><entry><title type="html">The Invisible Bouncer: A Deep Dive into SELinux Kernel Internals</title><link href="http://localhost:4000/2026/05/21/selinux-internals.html" rel="alternate" type="text/html" title="The Invisible Bouncer: A Deep Dive into SELinux Kernel Internals" /><published>2026-05-21T00:00:00+05:30</published><updated>2026-05-21T00:00:00+05:30</updated><id>http://localhost:4000/2026/05/21/selinux-internals</id><content type="html" xml:base="http://localhost:4000/2026/05/21/selinux-internals.html"><![CDATA[<div class="entry-content">
+    <p>
+        If you’ve ever managed a Red Hat, Fedora, or AlmaLinux system, you’ve likely encountered the "Permissive vs. Enforcing" debate. 
+        Most people treat <strong>SELinux (Security-Enhanced Linux)</strong> as a nuisance to be disabled, but under the hood, 
+        it is one of the most sophisticated security architectures in modern computing.
+    </p>
 
-<h1 id="lei">lei:</h1>
-<p>Installation in Debian/Ubuntu:<br />
-<code class="language-plaintext highlighter-rouge">sudo apt install -y lei</code></p>
+    <p>In this post, we’re going under the hood to see how the Linux kernel actually implements <strong>Mandatory Access Control (MAC)</strong>.</p>
 
-<p>lei, helps with fetching mail from lore.kernel.org without subscribing to any
-mailing list.<br />
-lei, also has query features which helps in filtering the mails.<br />
-For example to fetch mails from linux-block,linux-fsdevel mailing
-list from last one day,<br />
-below command should be useful.</p>
+    <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #eee;">
 
-<p><code class="language-plaintext highlighter-rouge">$ lei q -I https://lore.kernel.org/all -o ~/.lkml/mail --threads 
-    --dedupe=mid 
-    '(tc:linux-block OR tc:linux-fsdevel) AND rt:1.days.ago..'</code></p>
+    <h2 style="color: var(--accent); font-family: var(--mono);">1. Beyond Permissions: What is SELinux?</h2>
+    <p>
+        Standard Linux uses <strong>DAC (Discretionary Access Control)</strong>. If you own a file, you decide who sees it. 
+        If a process runs as root, it can see everything.
+    </p>
+    <p>
+        SELinux introduces <strong>MAC</strong>. It doesn't care if you are root. It asks: 
+        <em>"Does the security policy explicitly allow this specific process 'type' to touch this specific file 'type'?"</em>
+    </p>
 
-<p>Here t and c indicate to and cc mail recipient respectively.<br />
-Above query also edited later using lei edit-search.</p>
+    <h2 style="color: var(--accent); font-family: var(--mono);">2. The Architecture: Who Does the Work?</h2>
+    <p>SELinux isn't a separate program; it is baked into the <strong>LSM (Linux Security Module)</strong> framework.</p>
 
-<p>Once the query is finalized, next time to fetch the mails, simply use<br />
-<code class="language-plaintext highlighter-rouge">$ lei up ~/.lkml/mail</code></p>
+    
 
-<h1 id="notmuch">notmuch:</h1>
-<p>Installation in Debian/Ubuntu:<br />
-<code class="language-plaintext highlighter-rouge">sudo apt install -y notmuch</code></p>
+    <h3 style="font-size: 1.1rem; margin-top: 1.5rem;">The LSM Hooks</h3>
+    <p>Think of the kernel as a series of pipes. <strong>LSM hooks</strong> are sensors placed at every junction where a sensitive action occurs.</p>
+    
+    <ul style="border-left: 2px solid #28a745; padding-left: 20px; list-style: none;">
+        <li>1. Process calls <code>open()</code>.</li>
+        <li>2. Kernel checks standard <strong>DAC</strong>.</li>
+        <li>3. If allowed, kernel hits an <strong>LSM Hook</strong>.</li>
+        <li>4. Request is handed to the <strong>Security Server</strong>.</li>
+    </ul>
 
-<p>Above lei setup usually fetches and notmuch helps in filtering the mails<br />
-Typically a notmuch has a config file in ~/.notmuch-config<br />
-This file contains the path to fetch and store the filtered mails</p>
+    <h2 style="color: var(--accent); font-family: var(--mono);">3. The Performance Secret: The AVC</h2>
+    <p>Searching a rulebook for every system call would melt your CPU. The kernel uses the <strong>Access Vector Cache (AVC)</strong> to stay fast.</p>
+    
+    <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; font-family: var(--mono); font-size: 0.9rem;">
+        <strong>// AVC Logic:</strong><br>
+        1. Check AVC (Kernel Memory) -> <strong>HIT?</strong> Return Decision.<br>
+        2. <strong>MISS?</strong> Consult Security Server -> Calculate -> Update AVC.
+    </div>
 
-<p>With notmuch we can filter mails and attach tags to mails.
-And this tag will be used by neomutt to create different virtual mailboxes.</p>
+    
 
-<p>To filter mails to/cc to linux-block and attach tag linux-block, we use
-$ notmuch tag +linux-block – to:linux-block@vger.kernel.org</p>
+    <h2 style="color: var(--accent); font-family: var(--mono);">4. Practical Toolkit</h2>
+    <p>Here is how you talk to the bouncer in real life using the terminal.</p>
 
-<p>For more tagging batch queries, an input file can be passed.<br />
-Lets say we create a file by name notmuch-tag-rules,<br />
-<code class="language-plaintext highlighter-rouge">$ cat ~/.lkml/notmuch-tag-rules</code><br />
-+linux-block – to:linux-block@vger.kernel.org<br />
-+linux-fsdevel – to:linux-fsdevel@vger.kernel.org</p>
+    <div style="background: #1e1e1e; color: #fff; padding: 15px; border-radius: 5px; font-family: var(--mono); margin: 1rem 0;">
+        <span style="color: #888;"># Check status</span><br>
+        <span style="color: #28a745;">$</span> sestatus<br><br>
+        <span style="color: #888;"># Fix labels after moving files</span><br>
+        <span style="color: #28a745;">$</span> restorecon -v index.html
+    </div>
 
-<p>This file looks similar to command line query, without ‘notmuch tag’
-To run this batch tagging,<br />
-<code class="language-plaintext highlighter-rouge">$ notmuch tag --batch --input=~/.lkml/notmuch-tag-rules</code></p>
+    <h2 style="color: var(--accent); font-family: var(--mono);">5. Summary</h2>
+    <p>
+        By confining processes to their own <strong>Type</strong>, SELinux ensures that even if an attacker exploits a bug 
+        in your Web Server, they are trapped in a sandbox.
+    </p>
+</div>
 
-<h1 id="neomutt">neomutt:</h1>
-<p>Installation in Debian/Ubuntu:<br />
-<code class="language-plaintext highlighter-rouge">sudo apt install -y lei</code></p>
+<style>
+    /* Add this specifically for the post layout if not already in your CSS */
+    .entry-content p { margin-bottom: 1.2rem; }
+    code { background: #f0f0f0; padding: 2px 4px; border-radius: 4px; font-family: var(--mono); }
+    h2 { margin-top: 2.5rem; }
+</style>]]></content><author><name></name></author><summary type="html"><![CDATA[If you’ve ever managed a Red Hat, Fedora, or AlmaLinux system, you’ve likely encountered the "Permissive vs. Enforcing" debate. Most people treat SELinux (Security-Enhanced Linux) as a nuisance to be disabled, but under the hood, it is one of the most sophisticated security architectures in modern computing.]]></summary></entry><entry><title type="html">Workflow, Neomutt, Lei, Notmuch, Getmail, Gmail</title><link href="http://localhost:4000/2025/09/21/workflow-neomutt.html" rel="alternate" type="text/html" title="Workflow, Neomutt, Lei, Notmuch, Getmail, Gmail" /><published>2025-09-21T00:00:00+05:30</published><updated>2025-09-21T00:00:00+05:30</updated><id>http://localhost:4000/2025/09/21/workflow-neomutt</id><content type="html" xml:base="http://localhost:4000/2025/09/21/workflow-neomutt.html"><![CDATA[<div class="entry-content">
+    <p>This is a mail setup for terminal UI users. This uses combination of tools,<br>
+    neomutt for viewing mails,<br>
+    notmuch for filtering mails,<br>
+    getmail for fetching mails from gmail,<br>
+    lei for fetching mails from lore.kernel.org.<br>
+    For convinience, lets keep all the config files in ~/.lkml folder</p>
 
-<p>neomuttrc is config file, which can be passed to neomutt as argument.</p>
-<h4 id="virtual-mailbox">virtual mailbox:</h4>
-<p>virtual mailboxes help to arrange the mails.
-lets say we want to put mails from linux-block under linux-block mailing list.<br />
-    virtual-mailboxes “linux-block” “notmuch://?query=tag:linux-block”<br />
-    virtual-mailboxes “linux-fsdevel” “notmuch://?query=tag:linux-fsdevel”</p>
+    <pre><code>mkdir -p ~/.lkml/mail</code></pre>
 
-<h4 id="syncfetch-mails">sync/fetch mails</h4>
-<p>we make use of bash script to check and sync the mails.<br />
-This script is combination fetching mails from lei and filtering mail
-using notmuch.<br />
-let’s say we name the script fetch.sh<br />
-<code class="language-plaintext highlighter-rouge">$cat ~/.lkml/sync.sh</code><br />
-lei up ~/.lkml/mail<br />
-notmuch new<br />
-notmuch tag –batch –input=~/.lkml/notmuch-tag-rules<br />
-notmuch tag –remove-all +deleted tag:deleted</p>
+    <h2 style="color: var(--accent); font-family: var(--mono);">lei:</h2>
+    <p>Installation in Debian/Ubuntu:</p>
+    <pre><code>sudo apt install -y lei</code></pre>
 
-<p>we assign F to fetch mail using, and save this in neomuttrc <br />
-macro index F “<shell-escape>path_fetchmail_script 2&gt;&amp;1<enter>" "sync email and notmuch"</enter></shell-escape></p>
+    <p>lei, helps with fetching mail from lore.kernel.org without subscribing to any mailing list.<br>
+    lei, also has query features which helps in filtering the mails.<br>
+    For example to fetch mails from linux-block,linux-fsdevel mailing list from last one day,<br>
+    below command should be useful.</p>
 
-<p>Next I plan to add information about the neomuttrc and linking all together.<br />
-I plan to update improvements here. Stay tuned !!</p>]]></content><author><name></name></author><category term="linux" /><category term="workflow" /><category term="neomutt" /><category term="notmuch" /><category term="getmail" /><category term="lei" /><category term="gmail" /><summary type="html"><![CDATA[This is a mail setup for terminal UI users. This uses combination of tools, neomutt for viewing mails, notmuch for filtering mails, getmail for fetching mails from gmail, lei for fetching mails from lore.kernel.org. For convinience, lets keep all the config files in ~/.lkml folder mkdir -p ~/.lkml/mail]]></summary></entry><entry><title type="html">Workflow, Neovim, tmux and plugins</title><link href="http://localhost:4000/linux/workflow/neovim/tmux/plugins/2025/09/14/workflow-neovim.html" rel="alternate" type="text/html" title="Workflow, Neovim, tmux and plugins" /><published>2025-09-14T20:00:00+05:30</published><updated>2025-09-14T20:00:00+05:30</updated><id>http://localhost:4000/linux/workflow/neovim/tmux/plugins/2025/09/14/workflow-neovim</id><content type="html" xml:base="http://localhost:4000/linux/workflow/neovim/tmux/plugins/2025/09/14/workflow-neovim.html"><![CDATA[<p>My typical workflow in Ubuntu/Debian involves,<br />
-Neovim as editor, Tmux for window/session management.</p>
+    <pre><code>$ lei q -I https://lore.kernel.org/all -o ~/.lkml/mail --threads --dedupe=mid '(tc:linux-block OR tc:linux-fsdevel) AND rt:1.days.ago..'</code></pre>
 
-<h1 id="tldr">TL,DR</h1>
-<p>I usually put things inside scripts, instead of setting up tools and configs everytime,<br />
-Below steps should help you to setup neovim and tmux and use the keymap to get started.<br />
-<code class="language-plaintext highlighter-rouge">git clone https://github.com/nitesh-shetty/helper_scripts.git</code><br />
-<code class="language-plaintext highlighter-rouge">cd helper_scripts/ubuntu</code><br />
-<code class="language-plaintext highlighter-rouge">chmod a+x ./setup.sh</code><br />
-<code class="language-plaintext highlighter-rouge">./setup.sh nvim</code><br />
-<code class="language-plaintext highlighter-rouge">./setup.sh tmux</code></p>
+    <p>Here t and c indicate to and cc mail recipient respectively.<br>
+    Above query also edited later using lei edit-search.</p>
 
-<h2 id="keymaps">Keymaps</h2>
-<h2 id="neovim-useful-keymaps">neovim useful keymaps</h2>
-<p>To see all the currently opened file,<br />
-<code class="language-plaintext highlighter-rouge">space+space</code></p>
+    <p>Once the query is finalized, next time to fetch the mails, simply use</p>
+    <pre><code>$ lei up ~/.lkml/mail</code></pre>
 
-<p>To search files,<br />
-<code class="language-plaintext highlighter-rouge">space s f</code><br />
-you need to press space, first followed by s, followed by f</p>
+    <h2 style="color: var(--accent); font-family: var(--mono);">notmuch:</h2>
+    <p>Installation in Debian/Ubuntu:</p>
+    <pre><code>sudo apt install -y notmuch</code></pre>
 
-<p>To grep a string,<br />
-<code class="language-plaintext highlighter-rouge">space s g</code></p>
+    <p>Above lei setup usually fetches and notmuch helps in filtering the mails<br>
+    Typically a notmuch has a config file in ~/.notmuch-config<br>
+    This file contains the path to fetch and store the filtered mails</p>
 
-<h2 id="tmux-useful-keymaps">tmux useful keymaps</h2>
+    <p>With notmuch we can filter mails and attach tags to mails. And this tag will be used by neomutt to create different virtual mailboxes.</p>
 
-<p>Start a tmux session<br />
-<code class="language-plaintext highlighter-rouge">tmux new -s project</code></p>
+    <p>To filter mails to/cc to linux-block and attach tag linux-block, we use <code>$ notmuch tag +linux-block – to:linux-block@vger.kernel.org</code></p>
 
-<p>To detach without, closing the session<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a d</code><br />
-here you need to press ctrl and a together, followed by pressing d.</p>
+    <p>For more tagging batch queries, an input file can be passed.<br>
+    Lets say we create a file by name notmuch-tag-rules,</p>
+    
+    <pre><code>$ cat ~/.lkml/notmuch-tag-rules
++linux-block – to:linux-block@vger.kernel.org
++linux-fsdevel – to:linux-fsdevel@vger.kernel.org</code></pre>
 
-<h3 id="tmux-panes-windows-sessions">tmux panes, windows, sessions:</h3>
-<p>By default when you open a new session, you get a single pane and single window.<br />
-Then you can create multiple panes inside a single window.<br />
-Multiple windows create a session.</p>
+    <p>This file looks similar to command line query, without ‘notmuch tag’ To run this batch tagging,</p>
+    <pre><code>$ notmuch tag --batch --input=~/.lkml/notmuch-tag-rules</code></pre>
 
-<p>A typical scenario where this might happen is.<br />
-Lets say you are working with multiple virtual machines.<br />
-I usually prefer to keep a single window for each VM along with renaming each window.<br />
-In one terminal usually mail is opened. So no need to open multiple session.</p>
+    <h2 style="color: var(--accent); font-family: var(--mono);">neomutt:</h2>
+    <p>Installation in Debian/Ubuntu:</p>
+    <pre><code>sudo apt install -y lei</code></pre>
 
-<h4 id="creating-multiple-panes">Creating multiple panes:</h4>
-<p>Splitting the window and creating panes,<br />
-I felt | and - are intuitive of vertical and horizontal split respectively.<br />
-Hence,<br />
-To vertically split the window,<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a shift+\</code><br />
-or<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a |</code></p>
+    <p>neomuttrc is config file, which can be passed to neomutt as argument.</p>
 
-<p>To horizontally split the window,<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a shift+-</code><br />
-or<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a _</code></p>
+    <h3 style="font-size: 1.1rem; color: var(--accent); font-family: var(--mono);">virtual mailbox:</h3>
+    <p>virtual mailboxes help to arrange the mails. lets say we want to put mails from linux-block under linux-block mailing list.</p>
+    <pre><code>virtual-mailboxes “linux-block” “notmuch://?query=tag:linux-block”
+virtual-mailboxes “linux-fsdevel” “notmuch://?query=tag:linux-fsdevel”</code></pre>
 
-<p>You can check in ~/tmux.conf and change the keymap to your convience,<br />
-just check for split-window.</p>
+    <h3 style="font-size: 1.1rem; color: var(--accent); font-family: var(--mono);">sync/fetch mails</h3>
+    <p>we make use of bash script to check and sync the mails.<br>
+    This script is combination fetching mails from lei and filtering mail using notmuch.<br>
+    let’s say we name the script fetch.sh</p>
+    
+    <pre><code>$cat ~/.lkml/sync.sh
+lei up ~/.lkml/mail
+notmuch new
+notmuch tag –batch –input=~/.lkml/notmuch-tag-rules
+notmuch tag –remove-all +deleted tag:deleted</code></pre>
 
-<p>Since panes are smaller and you want to full-screen the pane you are working on.<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a z</code></p>
+    <p>we assign F to fetch mail using, and save this in neomuttrc</p>
+    <pre><code>macro index F “path_fetchmail_script 2>&1" "sync email and notmuch"</code></pre>
 
-<p>Since I also integrated tmux-navigator and premmaped tmux keys mapping ~/.tmux.conf,<br />
-below should be useful to move between panes.</p>
+    <p>Next I plan to add information about the neomuttrc and linking all together.<br>
+    I plan to update improvements here. Stay tuned !!"</p>
+</div>
 
-<p>Move ‘up’ to pane above:<br />
-<code class="language-plaintext highlighter-rouge">ctrl k</code></p>
+<style>
+    .entry-content p { margin-bottom: 1.2rem; line-height: 1.6; }
+    
+    pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 1rem;
+        border-radius: 5px;
+        overflow-x: auto;
+        border-left: 3px solid var(--accent);
+        font-family: var(--mono);
+        margin-bottom: 1.5rem;
+    }
+    
+    code {
+        font-family: var(--mono);
+        background: #f4f4f4;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.95rem;
+    }
+    
+    pre code {
+        background: none;
+        padding: 0;
+        color: inherit;
+    }
+</style>]]></content><author><name></name></author><summary type="html"><![CDATA[This is a mail setup for terminal UI users. This uses combination of tools, neomutt for viewing mails, notmuch for filtering mails, getmail for fetching mails from gmail, lei for fetching mails from lore.kernel.org. For convinience, lets keep all the config files in ~/.lkml folder]]></summary></entry><entry><title type="html">Workflow, Neovim, tmux and plugins</title><link href="http://localhost:4000/2025/09/14/workflow-neovim.html" rel="alternate" type="text/html" title="Workflow, Neovim, tmux and plugins" /><published>2025-09-14T00:00:00+05:30</published><updated>2025-09-14T00:00:00+05:30</updated><id>http://localhost:4000/2025/09/14/workflow-neovim</id><content type="html" xml:base="http://localhost:4000/2025/09/14/workflow-neovim.html"><![CDATA[<div class="entry-content">
+    <p>My typical workflow in Ubuntu/Debian involves,<br>
+    Neovim as editor, Tmux for window/session management.</p>
 
-<p>Move ‘down’ to pane below:<br />
-<code class="language-plaintext highlighter-rouge">ctrl j</code></p>
+    <h2 style="color: var(--accent); font-family: var(--mono);">TL,DR</h2>
+    <p>I usually put things inside scripts, instead of setting up tools and configs everytime,<br>
+    Below steps should help you to setup neovim and tmux and use the keymap to get started.</p>
+    
+    <pre><code>git clone https://github.com/nitesh-shetty/helper_scripts.git
+cd helper_scripts/ubuntu
+chmod a+x ./setup.sh
+./setup.sh nvim
+./setup.sh tmux</code></pre>
 
-<p>Move ‘left’ to pane:<br />
-<code class="language-plaintext highlighter-rouge">ctrl h</code></p>
+    <h2 style="color: var(--accent); font-family: var(--mono);">Keymaps</h2>
+    <h3 style="font-size: 1.1rem;">neovim useful keymaps</h3>
+    <p>To see all the currently opened file,<br>
+    <kbd>space</kbd>+<kbd>space</kbd></p>
 
-<p>Move ‘right’ to pane:<br />
-<code class="language-plaintext highlighter-rouge">ctrl l</code></p>
+    <p>To search files,<br>
+    <kbd>space</kbd> <kbd>s</kbd> <kbd>f</kbd><br>
+    you need to press space, first followed by s, followed by f</p>
 
-<h4 id="creating-multiple-windows">Creating multiple windows:</h4>
-<p>To create a new window<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a c</code></p>
+    <p>To grep a string,<br>
+    <kbd>space</kbd> <kbd>s</kbd> <kbd>g</kbd></p>
 
-<p>To rename a window<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a ,</code></p>
+    <h3 style="font-size: 1.1rem;">tmux useful keymaps</h3>
+    <p>Start a tmux session<br>
+    <code>tmux new -s project</code></p>
 
-<p>To move to next window<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a n</code></p>
+    <p>To detach without, closing the session<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>d</kbd><br>
+    here you need to press ctrl and a together, followed by pressing d.</p>
 
-<p>To move to previous window<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a p</code></p>
+    <h3 style="font-size: 1.1rem;">tmux panes, windows, sessions:</h3>
+    <p>By default when you open a new session, you get a single pane and single window.<br>
+    Then you can create multiple panes inside a single window.<br>
+    Multiple windows create a session.</p>
 
-<p>To move to 2nd window<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a 2</code><br />
-Similarly you can replace 2 to any nth window.</p>
+    <p>A typical scenario where this might happen is.<br>
+    Lets say you are working with multiple virtual machines.<br>
+    I usually prefer to keep a single window for each VM along with renaming each window.<br>
+    In one terminal usually mail is opened. So no need to open multiple session.</p>
 
-<h4 id="resizing-the-panes">Resizing the panes:</h4>
-<p>To expand the current pane up:<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a k</code></p>
+    <h3 style="font-size: 1.1rem;">Creating multiple panes:</h3>
+    <p>Splitting the window and creating panes,<br>
+    I felt | and - are intuitive of vertical and horizontal split respectively.<br>
+    Hence,<br>
+    To vertically split the window,<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>shift</kbd>+<kbd>\</kbd><br>
+    or<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>|</kbd></p>
 
-<p>To expand the current pane down:<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a j</code></p>
+    <p>To horizontally split the window,<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>shift</kbd>+<kbd>-</kbd><br>
+    or<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>_</kbd></p>
 
-<p>To expand the current pane left:<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a h</code></p>
+    <p>You can check in ~/tmux.conf and change the keymap to your convience,<br>
+    just check for split-window.</p>
 
-<p>To expand the current pane right:<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a l</code></p>
+    <p>Since panes are smaller and you want to full-screen the pane you are working on.<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>z</kbd></p>
 
-<h1 id="long-read">Long read</h1>
-<p>To know about how helper_script setups the neovim and tmux,</p>
-<h1 id="neovim">Neovim:</h1>
-<p>Ubuntu/Debian neovim installation:<br />
-<code class="language-plaintext highlighter-rouge">sudo apt install -y neovim</code></p>
+    <p>Since I also integrated tmux-navigator and premmaped tmux keys mapping ~/.tmux.conf,<br>
+    below should be useful to move between panes.</p>
 
-<p>If you are familiar with vi/vim, neovim has similar navigation keymap.<br />
-I would suggest to go through vimtutor, after installation.<br />
-Most of my plugin management comes from <a href="https://github.com/nvim-lua/kickstart.nvim">kickstart.nvim</a>.<br />
-For kernel development, there is extra plugin for vim options.<br />
-Since I use tmux along with neovim, tmux_navigator.lua helps to
-navigate across multiple tmux panes and vim windows.</p>
+    <p>Move ‘up’ to pane above:<br>
+    <kbd>ctrl</kbd> <kbd>k</kbd></p>
 
-<p>Configuring kickstart.nvim,<br />
-<code class="language-plaintext highlighter-rouge">git clone https://github.com/nvim-lua/kickstart.nvim.git ~/.config/nvim</code></p>
+    <p>Move ‘down’ to pane below:<br>
+    <kbd>ctrl</kbd> <kbd>j</kbd></p>
 
-<h3 id="plugins">plugins:</h3>
-<p><em>vim_options</em>:<br />
-This is my customization carried from previous my previous vim legacy.<br />
-Some of the key bindings are related to Linux kernel developement such as,<br />
-getting to know we should wrap around at column 80.<br />
-Configuration:<br />
-<code class="language-plaintext highlighter-rouge">wget https://github.com/nitesh-shetty/dotfiles/blob/main/vim_options.lua ~/.config/nvim/lua/custom/plugins/vim_options.lua</code></p>
+    <p>Move ‘left’ to pane:<br>
+    <kbd>ctrl</kbd> <kbd>h</kbd></p>
 
-<p><em>tmux_navigator.lua</em>:<br />
-This plugin helps to navigate from neovim to other terminal when using inside tmux.<br />
-Configuration:<br />
-<code class="language-plaintext highlighter-rouge">wget https://github.com/nitesh-shetty/dotfiles/blob/main/tmux_navigator.lua ~/.config/nvim/lua/custom/plugins/tmux_navigator.lua</code></p>
+    <p>Move ‘right’ to pane:<br>
+    <kbd>ctrl</kbd> <kbd>l</kbd></p>
 
-<p><em>vimtex.lua</em>:
-This plugin is realted to latex, here we configure vimtex view method as zathura.<br />
-If you not using latex, you can skip this step.<br />
-Configuration:<br />
-<code class="language-plaintext highlighter-rouge">wget https://github.com/nitesh-shetty/dotfiles/blob/main/vimtex.lua ~/.config/nvim/lua/custom/plugins/vimtex.lua</code></p>
+    <h3 style="font-size: 1.1rem;">Creating multiple windows:</h3>
+    <p>To create a new window<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>c</kbd></p>
 
-<p>Lets say, you are inside neovim editor and want to move to right side pane then press,<br />
-<code class="language-plaintext highlighter-rouge">ctrl + l</code> 
-similarly other keys,<br />
-<code class="language-plaintext highlighter-rouge">ctrl + h</code> for moving to left pane<br />
-<code class="language-plaintext highlighter-rouge">ctrl + j</code> for moving to down pane<br />
-<code class="language-plaintext highlighter-rouge">ctrl + k</code> for moving to up pane<br />
-<code class="language-plaintext highlighter-rouge">ctrl + l</code> for moving to right pane</p>
+    <p>To rename a window<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>,</kbd></p>
 
-<blockquote>
-  <p>leaderkey  or mapleaderkey or prefix</p>
-</blockquote>
+    <p>To move to next window<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>n</kbd></p>
 
-<p>To trigger any command related to neovim you need to press a combination of keys,<br />
-called as mapleaderkey.
-This is usually stored in neovim config file, which can be found in ~/.config/nvim/init.lua.<br />
-My leaderkey is default ‘space key’. My init file is <a href="https://github.com/nvim-lua/kickstart.nvim/blob/master/init.lua">here</a><br />
-You can change it by editing ‘vim.g.mapleaderkey’ in  ~/.config/nvim/init.lua</p>
+    <p>To move to previous window<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>p</kbd></p>
 
-<h1 id="tmux">Tmux:</h1>
-<p>Ubuntu/Debian tmux installation:<br />
-<code class="language-plaintext highlighter-rouge">sudo apt install -y tmux</code></p>
+    <p>To move to 2nd window<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>2</kbd><br>
+    Similarly you can replace 2 to any nth window.</p>
 
-<p>If you are working on remote Linux desktop, tmux helps to create multiple session, panes.<br />
-Another advantage is you can keep the session alive even your network connection is lost.<br />
-Effectively, your tmux session is saved until the PC is on.</p>
+    <h3 style="font-size: 1.1rem;">Resizing the panes:</h3>
+    <p>To expand the current pane up:<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>k</kbd></p>
 
-<blockquote>
-  <p>prefix</p>
-</blockquote>
+    <p>To expand the current pane down:<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>j</kbd></p>
 
-<p>To trigger any command related to tmux you need to press a combination of keys,<br />
-called as prefix.
-This is usually stored in tmux config file, which can be found in<br />
-~/.tmux.conf. My tmux.conf can be found <a href="https://github.com/nitesh-shetty/dotfiles/blob/main/tmux.conf">here</a><br />
-<code class="language-plaintext highlighter-rouge">wget https://github.com/nitesh-shetty/dotfiles/blob/main/tmux.conf ~/.tmux.conf</code><br />
-Default key mapping for tmux is ctrl+b (press ‘control’ and ‘b’ key simultaneously),<br />
-but I changed it to ctrl+a, for convenience.
-You can change it by editing ‘prefix’ in<br />
-~/tmux.conf</p>
+    <p>To expand the current pane left:<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>h</kbd></p>
 
-<h4 id="tmux-plugins">tmux plugins:</h4>
-<p>Tmux comes with plugin management, such as <a href="https://github.com/tmux-plugins/tpm">tpm</a>.<br />
-<code class="language-plaintext highlighter-rouge">git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm</code></p>
+    <p>To expand the current pane right:<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>l</kbd></p>
 
-<p><em>tmux-continuum</em>: this plugin saves the tmux sessions every 15 minutes<br />
-<em>tmux-resurrect</em>: this plugin helps to recover the previously saved session
-from tmux-continuum<br />
-<em>tmux-themepack</em>: jimeh/tmux-themepack gives a clean elegant look to tmux session<br />
-Add below lines to ~/.tmux.conf if you want to integrate the above plugins.<br />
-set -g @plugin ‘tmux-plugins/tpm’<br />
-set -g @plugin ‘jimeh/tmux-themepack’<br />
-set -g @plugin ‘tmux-plugins/tmux-resurrect’<br />
-set -g @plugin ‘tmux-plugins/tmux-continuum’<br />
-set -g @themepack ‘powerline/default/yellow’<br />
-set -g @resurrect-capture-pane-contents ‘on’<br />
-set -g @continuum-restore ‘on’<br />
-run ‘~/.tmux/plugiins/tpm/tpm’</p>
+    <h2 style="color: var(--accent); font-family: var(--mono);">Long read</h2>
+    <p>To know about how helper_script setups the neovim and tmux,</p>
 
-<p>After adding above lines in ~/.tmux.conf, to install plugins<br />
-<code class="language-plaintext highlighter-rouge">ctrl+a shift+i</code></p>]]></content><author><name></name></author><category term="linux" /><category term="workflow" /><category term="neovim" /><category term="tmux" /><category term="plugins" /><summary type="html"><![CDATA[My typical workflow in Ubuntu/Debian involves, Neovim as editor, Tmux for window/session management.]]></summary></entry></feed>
+    <h3 style="font-size: 1.1rem;">Neovim:</h3>
+    <p>Ubuntu/Debian neovim installation:<br>
+    <code>sudo apt install -y neovim</code></p>
+
+    <p>If you are familiar with vi/vim, neovim has similar navigation keymap.<br>
+    I would suggest to go through vimtutor, after installation.<br>
+    Most of my plugin management comes from kickstart.nvim.<br>
+    For kernel development, there is extra plugin for vim options.<br>
+    Since I use tmux along with neovim, tmux_navigator.lua helps to navigate across multiple tmux panes and vim windows.</p>
+
+    <p>Configuring kickstart.nvim,<br>
+    <code>git clone https://github.com/nvim-lua/kickstart.nvim.git ~/.config/nvim</code></p>
+
+    <h4 style="font-size: 1rem;">plugins:</h4>
+    <p><strong>vim_options:</strong><br>
+    This is my customization carried from previous my previous vim legacy.<br>
+    Some of the key bindings are related to Linux kernel developement such as,<br>
+    getting to know we should wrap around at column 80.<br>
+    Configuration:<br>
+    <code>wget https://github.com/nitesh-shetty/dotfiles/blob/main/vim_options.lua ~/.config/nvim/lua/custom/plugins/vim_options.lua</code></p>
+
+    <p><strong>tmux_navigator.lua:</strong><br>
+    This plugin helps to navigate from neovim to other terminal when using inside tmux.<br>
+    Configuration:<br>
+    <code>wget https://github.com/nitesh-shetty/dotfiles/blob/main/tmux_navigator.lua ~/.config/nvim/lua/custom/plugins/tmux_navigator.lua</code></p>
+
+    <p><strong>vimtex.lua:</strong> This plugin is realted to latex, here we configure vimtex view method as zathura.<br>
+    If you not using latex, you can skip this step.<br>
+    Configuration:<br>
+    <code>wget https://github.com/nitesh-shetty/dotfiles/blob/main/vimtex.lua ~/.config/nvim/lua/custom/plugins/vimtex.lua</code></p>
+
+    <p>Lets say, you are inside neovim editor and want to move to right side pane then press,<br>
+    <kbd>ctrl</kbd> + <kbd>l</kbd> similarly other keys,<br>
+    <kbd>ctrl</kbd> + <kbd>h</kbd> for moving to left pane<br>
+    <kbd>ctrl</kbd> + <kbd>j</kbd> for moving to down pane<br>
+    <kbd>ctrl</kbd> + <kbd>k</kbd> for moving to up pane<br>
+    <kbd>ctrl</kbd> + <kbd>l</kbd> for moving to right pane</p>
+
+    <p><strong>leaderkey or mapleaderkey or prefix</strong></p>
+
+    <p>To trigger any command related to neovim you need to press a combination of keys,<br>
+    called as mapleaderkey. This is usually stored in neovim config file, which can be found in ~/.config/nvim/init.lua.<br>
+    My leaderkey is default ‘space key’. My init file is <a href="https://github.com/nvim-lua/kickstart.nvim/blob/master/init.lua">here</a><br>
+    You can change it by editing ‘vim.g.mapleaderkey’ in ~/.config/nvim/init.lua</p>
+
+    <h3 style="font-size: 1.1rem;">Tmux:</h3>
+    <p>Ubuntu/Debian tmux installation:<br>
+    <code>sudo apt install -y tmux</code></p>
+
+    <p>If you are working on remote Linux desktop, tmux helps to create multiple session, panes.<br>
+    Another advantage is you can keep the session alive even your network connection is lost.<br>
+    Effectively, your tmux session is saved until the PC is on.</p>
+
+    <p><strong>prefix</strong></p>
+
+    <p>To trigger any command related to tmux you need to press a combination of keys,<br>
+    called as prefix. This is usually stored in tmux config file, which can be found in<br>
+    ~/.tmux.conf. My tmux.conf can be found <a href="https://github.com/nitesh-shetty/dotfiles/blob/main/tmux.conf">here</a><br>
+    <code>wget https://github.com/nitesh-shetty/dotfiles/blob/main/tmux.conf ~/.tmux.conf</code><br>
+    Default key mapping for tmux is ctrl+b (press ‘control’ and ‘b’ key simultaneously),<br>
+    but I changed it to ctrl+a, for convenience. You can change it by editing ‘prefix’ in<br>
+    ~/tmux.conf</p>
+
+    <h4 style="font-size: 1rem;">tmux plugins:</h4>
+    <p>Tmux comes with plugin management, such as tpm.<br>
+    <code>git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm</code></p>
+
+    <p><strong>tmux-continuum:</strong> this plugin saves the tmux sessions every 15 minutes<br>
+    <strong>tmux-resurrect:</strong> this plugin helps to recover the previously saved session from tmux-continuum<br>
+    <strong>tmux-themepack:</strong> jimeh/tmux-themepack gives a clean elegant look to tmux session<br>
+    Add below lines to ~/.tmux.conf if you want to integrate the above plugins.</p>
+    
+    <pre><code>set -g @plugin ‘tmux-plugins/tpm’
+set -g @plugin ‘jimeh/tmux-themepack’
+set -g @plugin ‘tmux-plugins/tmux-resurrect’
+set -g @plugin ‘tmux-plugins/tmux-continuum’
+set -g @themepack ‘powerline/default/yellow’
+set -g @resurrect-capture-pane-contents ‘on’
+set -g @continuum-restore ‘on’
+run ‘~/.tmux/plugiins/tpm/tpm’</code></pre>
+
+    <p>After adding above lines in ~/.tmux.conf, to install plugins<br>
+    <kbd>ctrl</kbd>+<kbd>a</kbd> <kbd>shift</kbd>+<kbd>i</kbd></p>
+</div>
+
+<style>
+    .entry-content p { margin-bottom: 1.2rem; line-height: 1.6; }
+    
+    kbd {
+        background-color: #eee;
+        border-radius: 3px;
+        border: 1px solid #b4b4b4;
+        box-shadow: 0 1px 1px rgba(0,0,0,0.2);
+        color: #333;
+        display: inline-block;
+        font-size: 0.85em;
+        font-weight: 700;
+        line-height: 1;
+        padding: 2px 4px;
+        white-space: nowrap;
+        font-family: var(--mono);
+    }
+
+    pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 1rem;
+        border-radius: 5px;
+        overflow-x: auto;
+        border-left: 3px solid var(--accent);
+        font-family: var(--mono);
+        margin-bottom: 1.5rem;
+    }
+    
+    code {
+        font-family: var(--mono);
+        font-size: 0.95rem;
+    }
+</style>]]></content><author><name></name></author><summary type="html"><![CDATA[My typical workflow in Ubuntu/Debian involves, Neovim as editor, Tmux for window/session management.]]></summary></entry></feed>
