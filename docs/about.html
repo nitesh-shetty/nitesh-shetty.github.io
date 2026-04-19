@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About | Nitesh Shetty</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #1a1a1a;
+            --muted: #666;
+            --accent: #007bff;
+            --mono: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            padding: 8vh 20px;
+        }
+
+        .nav-back { font-family: var(--mono); margin-bottom: 2rem; }
+        .nav-back a { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+
+        h1 { font-family: var(--mono); font-size: 2rem; margin-bottom: 1.5rem; }
+        
+        h2 { 
+            font-family: var(--mono); 
+            font-size: 1rem; 
+            text-transform: uppercase; 
+            color: var(--accent);
+            margin-top: 2.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .mainline-box {
+            background: #f8f9fa;
+            border-left: 4px solid var(--accent);
+            padding: 1.5rem;
+            margin: 2rem 0;
+            font-family: var(--mono);
+            font-size: 0.9rem;
+        }
+
+        .contact-list { list-style: none; padding: 0; font-family: var(--mono); }
+        .contact-list li { margin-bottom: 0.5rem; }
+        .contact-list a { color: var(--text); text-decoration: underline; }
+
+        @media (max-width: 600px) { .container { padding-top: 5vh; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <nav class="nav-back">
+            <a href="/"><- back to logs</a>
+        </nav>
+
+        <header>
+            <h1>whoami</h1>
+            <p>I am <strong>Nitesh Shetty</strong>, a Linux Kernel Developer specializing in the <strong>storage stack</strong>.</p>
+        </header>
+
+        <main>
+            <h2>Current Focus</h2>
+            <p>At present, I am deep in the guts of the Linux kernel, working on <strong>NVMe</strong>, the <strong>Block Layer</strong>, and <strong>io_uring</strong>. I focus on optimizing I/O performance and reliability for modern storage hardware.</p>
+
+            <div class="mainline-box">
+                // Mainline Contributions<br>
+                You can track my patches in the Linux Kernel source <a href="https://git.kernel.org/pub/scm/linux/kernel/git/axboe/linux-block.git/log/?qt=author&q=nj.shetty" target="_blank">here</a>.
+            </div>
+
+            <h2>History</h2>
+            <p>Before focusing on storage, I spent time across different layers of the system:</p>
+            <ul>
+                <li>Developed a <strong>vNIC driver</strong> from the ground up.</li>
+                <li>Commercialized <strong>Battery Management Systems</strong> for Samsung mobile devices, including charging drivers and fuel-gauge ICs.</li>
+                <li>Wrote <strong>ALSA audio codec drivers</strong> (my first foray into the kernel world).</li>
+            </ul>
+
+            <h2>Philosophy</h2>
+            <p>I started this blog as a digital logbook. My goal is threefold:</p>
+            <ol>
+                <li>Refine my technical writing.</li>
+                <li>Deepen my own understanding of complex subsystems.</li>
+                <li>Share knowledge with anyone else navigating the Linux ecosystem.</li>
+            </ol>
+
+            <h2>Connect</h2>
+            <ul class="contact-list">
+                <li>Email: <a href="mailto:nitheshshetty@gmail.com">nitheshshetty@gmail.com</a></li>
+                <li>GitHub: <a href="https://github.com/nitesh-shetty">nitesh-shetty</a></li>
+                <li>LinkedIn: <a href="https://www.linkedin.com/in/nitesh-shetty-16103754">nitesh-shetty-16103754</a></li>
+            </ul>
+        </main>
+    </div>
+
+</body>
+</html>
