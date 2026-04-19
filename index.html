@@ -1,0 +1,131 @@
+---
+layout: default
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        /* 1. Reset & Base Styles */
+        :root {
+            --bg-color: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --accent: #007bff;
+            --mono-font: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        .home-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* 2. Hero Section */
+        .hero {
+            padding: 4rem 0;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin: 0;
+            letter-spacing: -2px;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-top: 1rem;
+        }
+
+        /* 3. The "Hacker" Links */
+        .terminal-nav {
+            margin-top: 1.5rem;
+            font-family: var(--mono-font);
+        }
+
+        .terminal-nav a {
+            color: var(--accent);
+            text-decoration: none;
+            margin-right: 15px;
+        }
+
+        .terminal-nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* 4. Post Feed */
+        .post-list {
+            margin-top: 3rem;
+        }
+
+        .post-item {
+            margin-bottom: 3rem;
+            list-style: none;
+        }
+
+        .post-meta {
+            font-family: var(--mono-font);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .post-title {
+            font-size: 1.75rem;
+            display: block;
+            margin: 0.5rem 0;
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .post-title:hover {
+            color: var(--accent);
+        }
+
+        .post-excerpt {
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="home-container">
+        <header class="hero">
+            <h1>Nitesh Shetty</h1>
+            <p>
+                I build and break things in the <strong>Linux ecosystem</strong>. 
+            </p>
+            <nav class="terminal-nav">
+                <a href="https://github.com/nitesh-shetty">> GitHub</a>
+                <a href="https://linkedin.com/in/nitesh-shetty-16103754">> LinkedIn</a>
+                <a href="/about">> Whoami</a>
+            </nav>
+        </header>
+
+        <section class="post-list">
+            <h2 style="font-family: var(--mono-font); font-size: 1rem; color: #ccc; margin-bottom: 2rem;">~/posts</h2>
+            
+            {% for post in site.posts %}
+            <article class="post-item">
+                <div class="post-meta">
+                    {{ post.date | date: "%Y-%m-%d" }} | 
+                    {% assign words = post.content | number_of_words %}
+                    {{ words | divided_by: 180 | plus: 1 }} MIN READ
+                </div>
+                <a class="post-title" href="{{ post.url | relative_url }}">
+                    {{ post.title }}
+                </a>
+                <div class="post-excerpt">
+                    {{ post.excerpt | strip_html | truncatewords: 25 }}
+                </div>
+            </article>
+            {% endfor %}
+        </section>
+    </div>
+
+</body>
+</html>

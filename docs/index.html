@@ -36,21 +36,150 @@
 </header>
 <main class="page-content" aria-label="Content">
       <div class="wrapper">
-        <div class="home">
-<h2 class="post-list-heading">Posts</h2>
-    <ul class="post-list"><li><span class="post-meta">Sep 21, 2025</span>
-        <h3>
-          <a class="post-link" href="/linux/workflow/neomutt/notmuch/getmail/lei/gmail/2025/09/21/workflow-neomutt.html">
-            Workflow, Neomutt, Lei, Notmuch, Getmail, Gmail
-          </a>
-        </h3></li><li><span class="post-meta">Sep 14, 2025</span>
-        <h3>
-          <a class="post-link" href="/linux/workflow/neovim/tmux/plugins/2025/09/14/workflow-neovim.html">
-            Workflow, Neovim, tmux and plugins
-          </a>
-        </h3></li></ul>
+        <!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        /* 1. Reset & Base Styles */
+        :root {
+            --bg-color: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --accent: #007bff;
+            --mono-font: 'JetBrains Mono', 'Fira Code', monospace;
+        }
 
-    <p class="rss-subscribe">subscribe <a href="/feed.xml">via RSS</a></p></div>
+        .home-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* 2. Hero Section */
+        .hero {
+            padding: 4rem 0;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin: 0;
+            letter-spacing: -2px;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-top: 1rem;
+        }
+
+        /* 3. The "Hacker" Links */
+        .terminal-nav {
+            margin-top: 1.5rem;
+            font-family: var(--mono-font);
+        }
+
+        .terminal-nav a {
+            color: var(--accent);
+            text-decoration: none;
+            margin-right: 15px;
+        }
+
+        .terminal-nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* 4. Post Feed */
+        .post-list {
+            margin-top: 3rem;
+        }
+
+        .post-item {
+            margin-bottom: 3rem;
+            list-style: none;
+        }
+
+        .post-meta {
+            font-family: var(--mono-font);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .post-title {
+            font-size: 1.75rem;
+            display: block;
+            margin: 0.5rem 0;
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .post-title:hover {
+            color: var(--accent);
+        }
+
+        .post-excerpt {
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="home-container">
+        <header class="hero">
+            <h1>Nitesh Shetty</h1>
+            <p>
+                I build and break things in the <strong>Linux ecosystem</strong>. 
+            </p>
+            <nav class="terminal-nav">
+                <a href="https://github.com/nitesh-shetty">> GitHub</a>
+                <a href="https://linkedin.com/in/nitesh-shetty-16103754">> LinkedIn</a>
+                <a href="/about">> Whoami</a>
+            </nav>
+        </header>
+
+        <section class="post-list">
+            <h2 style="font-family: var(--mono-font); font-size: 1rem; color: #ccc; margin-bottom: 2rem;">~/posts</h2>
+            
+            
+            <article class="post-item">
+                <div class="post-meta">
+                    2025-09-21 | 
+                    
+                    3 MIN READ
+                </div>
+                <a class="post-title" href="/linux/workflow/neomutt/notmuch/getmail/lei/gmail/2025/09/21/workflow-neomutt.html">
+                    Workflow, Neomutt, Lei, Notmuch, Getmail, Gmail
+                </a>
+                <div class="post-excerpt">
+                    This is a mail setup for terminal UI users. This uses combination of tools, neomutt for viewing mails, notmuch for filtering mails, getmail for fetching...
+                </div>
+            </article>
+            
+            <article class="post-item">
+                <div class="post-meta">
+                    2025-09-14 | 
+                    
+                    7 MIN READ
+                </div>
+                <a class="post-title" href="/linux/workflow/neovim/tmux/plugins/2025/09/14/workflow-neovim.html">
+                    Workflow, Neovim, tmux and plugins
+                </a>
+                <div class="post-excerpt">
+                    My typical workflow in Ubuntu/Debian involves,
+Neovim as editor, Tmux for window/session management.
+
+
+                </div>
+            </article>
+            
+        </section>
+    </div>
+
+</body>
+</html>
 
       </div>
     </main><footer class="site-footer h-card">
