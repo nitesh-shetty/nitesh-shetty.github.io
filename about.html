@@ -7,6 +7,14 @@ layout: null
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About | Nitesh Shetty</title>
+    <script>
+        (function() {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <style>
         :root {
             --bg: #ffffff;
@@ -14,6 +22,16 @@ layout: null
             --muted: #666;
             --accent: #007bff;
             --mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --border: #eee;
+            --code-bg: #f8f9fa;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1a1a1a;
+            --text: #e0e0e0;
+            --muted: #888;
+            --border: #333;
+            --code-bg: #2d2d2d;
         }
 
         body {
@@ -24,6 +42,23 @@ layout: null
             margin: 0;
             padding: 0;
         }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            padding: 0.5rem;
+            opacity: 0.6;
+        }
+        .theme-toggle:hover { opacity: 1; }
+        [data-theme="dark"] .theme-toggle .icon-sun { display: inline; }
+        [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+        [data-theme="light"] .theme-toggle .icon-sun { display: none; }
+        [data-theme="light"] .theme-toggle .icon-moon { display: inline; }
 
         .container {
             max-width: 650px;
@@ -42,12 +77,12 @@ layout: null
             text-transform: uppercase; 
             color: var(--accent);
             margin-top: 2.5rem;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border);
             padding-bottom: 5px;
         }
 
         .mainline-box {
-            background: #f8f9fa;
+            background: var(--code-bg);
             border-left: 4px solid var(--accent);
             padding: 1.5rem;
             margin: 2rem 0;
@@ -63,6 +98,21 @@ layout: null
     </style>
 </head>
 <body>
+
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+        <span class="icon-sun">☀</span>
+        <span class="icon-moon">☾</span>
+    </button>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
 
     <div class="container">
         <nav class="nav-back">
