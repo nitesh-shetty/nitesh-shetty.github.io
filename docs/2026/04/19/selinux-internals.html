@@ -40,20 +40,23 @@
             line-height: 1.7;
             margin: 0;
             padding: 0;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .theme-toggle {
             position: fixed;
             top: 1.5rem;
             right: 1.5rem;
-            background: none;
+            background: var(--bg);
             border: none;
             cursor: pointer;
             font-size: 1.5rem;
             padding: 0.5rem;
             opacity: 0.6;
+            border-radius: 8px;
         }
         .theme-toggle:hover { opacity: 1; }
+        .icon-sun, .icon-moon { color: var(--text); }
         [data-theme="dark"] .theme-toggle .icon-sun { display: inline; }
         [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
         [data-theme="light"] .theme-toggle .icon-sun { display: none; }
